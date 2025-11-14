@@ -1,0 +1,38 @@
+import requests
+
+NEWS_API_KEY = "e0d0b9db4e3c47e285e2ab3764b34c5e"  
+
+def get_news():
+    
+
+    try:
+        url = f"https://newsapi.org/v2/everything?q=india&sortBy=publishedAt&pageSize=20&apiKey={NEWS_API_KEY}"
+        r = requests.get(url, timeout=10)
+        r.raise_for_status()
+        data = r.json()
+
+        articles = data.get("articles", [])
+        if not articles:
+            return ["No news articles found."]
+
+        
+        india_headlines = []
+        for a in articles:
+            title = a.get("title", "")
+            desc = a.get("description", "")
+            
+            if "india" in title.lower() or "india" in desc.lower():
+                india_headlines.append(title)
+
+            if len(india_headlines) == 3:
+                break
+
+        if not india_headlines:
+            return ["No India-specific news found."]
+
+        return india_headlines
+
+    except Exception as e:
+        return [f"Error fetching news: {e}"]
+
+
