@@ -1,13 +1,14 @@
-import speech_recognition as sr   
+import speech_recognition as sr  
 import webbrowser                 
 import pyttsx3                   
 import music_library             
 import pyjokes                    
-import requests                   
+import requests         
+import Igris_Api       
+import alarm
 
 
 OPENWEATHER_API_KEY = "c2e46c0649f7a423c313ade86d820588"   
-
 
 recognizer = sr.Recognizer()
 engine = pyttsx3.init()
@@ -23,6 +24,8 @@ def speak(text):
     engine.say(text)
     engine.runAndWait()
 
+speak("Hi, I am Igris")
+speak("\nVersion one point O")
 
 def get_weather(city_name=""):
     
@@ -53,13 +56,26 @@ def get_weather(city_name=""):
         return f"Error fetching weather: {e}"
 
 
-last_city = None  # stores the last used city
+last_city = None  
 
 def processCommand(command):
 
     global last_city
     command = command.lower()
     print("Processing command:", command)
+    
+    if "news" in command or "headlines" in command:
+        speak("Fetching the top three headlines, please wait...")
+        headlines = Igris_Api.get_news()
+
+        if len(headlines) == 1 and headlines[0].startswith("Error"):
+            speak("Sorry, I couldn't fetch the news right now.")
+            print(headlines[0])
+            return
+
+        for i, headline in enumerate(headlines, start=1):
+            speak(f"Headline {i}: {headline}")
+        return
 
     
     if "open google" in command:
@@ -73,6 +89,14 @@ def processCommand(command):
     elif "open facebook" in command:
         speak("Opening Facebook")
         webbrowser.open("https://facebook.com")
+        
+    elif "version" in command:
+        speak("My version is one point O.")
+        speak("I was created by Mohit Surewal.")
+    
+    elif "who created you" in command or "your creator" in command:
+        speak("I was created by Mohit Surewal from University Institute of Technology, BU Bhopal.")
+        speak("My current version is one point O.")
 
    
     elif command.startswith("play"):
@@ -88,7 +112,28 @@ def processCommand(command):
         else:
             speak("Please say the song name after play.")
 
+    elif "alarm" in command:
+        speak("Please tell me the alarm time, like 6 30 AM or 10 PM")
 
+        try:
+            with sr.Microphone() as source:
+                recognizer.adjust_for_ambient_noise(source)
+                audio = recognizer.listen(source, timeout=5, phrase_time_limit=5)
+                spoken_time = recognizer.recognize_google(audio)
+
+            alarm_time = alarm.convert_to_24hr(spoken_time)
+
+            if alarm_time is None:
+                speak("Sorry, I could not understand the time format.")
+                return
+
+            alarm.set_alarm(alarm_time, speak, recognizer)
+
+        except Exception as e:
+            speak("Sorry, I couldn't set the alarm.")
+            print("Alarm error:", e)
+
+    
     elif "joke" in command:
         joke = pyjokes.get_joke()
         print("Joke:", joke)
@@ -138,10 +183,12 @@ def processCommand(command):
 
     
     else:
-        speak("Sorry, I didn’t understand that command.")
+        speak("Sorry, I didn’t understand that command.")  
 
+    
 
 if __name__ == "__main__":
+   
     speak("Initializing Igris.....")
 
     while True:
@@ -165,10 +212,13 @@ if __name__ == "__main__":
                 command = recognizer.recognize_google(audio)
                 print("Command:", command)
                 processCommand(command)
+                
 
         except sr.WaitTimeoutError:
             print("Listening timed out. Waiting again...")
+            
         except sr.UnknownValueError:
             print("Could not understand audio.")
+            
         except Exception as e:
             print("Error:", e)
