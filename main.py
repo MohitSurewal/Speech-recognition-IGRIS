@@ -1,80 +1,124 @@
-import speech_recognition as sr  
-import webbrowser                 
-import pyttsx3                   
-import music_library             
-import pyjokes                    
-import requests         
-import Igris_Api       
-import alarm
+import time
+import tkinter as tk
+from tkinter import scrolledtext
+import webbrowser
+import speech_recognition as sr
+import pyttsx3
+import pyjokes
+import requests
+import music_library
+import Igris_Api
+import random
 
-
-OPENWEATHER_API_KEY = "c2e46c0649f7a423c313ade86d820588"   
+OPENWEATHER_API_KEY = "c2e46c0649f7a423c313ade86d820588"
 
 recognizer = sr.Recognizer()
 engine = pyttsx3.init()
 
+voices = engine.getProperty("voices")
+if len(voices) > 1:
+    engine.setProperty("voice", voices[1].id)   # female voice
+engine.setProperty("rate", 180)
 
-voices = engine.getProperty('voices')
-engine.setProperty('voice', voices[1].id)  # female voice
-engine.setProperty('rate', 180)  # speaking speed
 
 
 def speak(text):
-    print("IGRIS:", text)
+    log(f"IGRIS: {text}")
     engine.say(text)
     engine.runAndWait()
 
-speak("Hi, I am Igris")
-speak("\nVersion one point O")
 
-def get_weather(city_name=""):
-    
+def log(message):
+    timestamp = time.strftime("%H:%M:%S")
+    log_area.insert(tk.END, f"[{timestamp}] {message}\n")
+    log_area.see(tk.END)
+    app.update()
+
+
+
+
+def get_weather(city):
     if not OPENWEATHER_API_KEY:
-        return "Weather API key is not configured properly."
-    if not city_name:
-        return "Please specify a city name."
+        return "Weather API key is missing."
 
-    url = f"https://api.openweathermap.org/data/2.5/weather?q={city_name}&units=metric&appid={OPENWEATHER_API_KEY}"
+    url = (
+        f"https://api.openweathermap.org/data/2.5/weather"
+        f"?q={city}&units=metric&appid={OPENWEATHER_API_KEY}"
+    )
+
     try:
         r = requests.get(url, timeout=10)
         if r.status_code != 200:
-            return f"Couldn't fetch weather for {city_name}."
+            return f"Could not fetch weather for {city}."
+
         data = r.json()
+        desc = data["weather"][0]["description"]
+        temp = data["main"]["temp"]
+        humidity = data["main"]["humidity"]
 
-        main = data.get("weather", [{}])[0].get("description", "no description")
-        temp = data.get("main", {}).get("temp")
-        feels_like = data.get("main", {}).get("feels_like")
-        humidity = data.get("main", {}).get("humidity")
-
-        summary = (
-            f"The weather in {city_name} is {main}. "
-            f"Temperature is {temp}°C, feels like {feels_like}°C, with {humidity}% humidity."
+        return (
+            f"The weather in {city} is {desc}. "
+            f"Temperature is {temp} degree Celsius "
+            f"with humidity {humidity} percent."
         )
-        return summary
 
     except Exception as e:
-        return f"Error fetching weather: {e}"
-
-
-last_city = None  
-
-def processCommand(command):
-
-    global last_city
-    command = command.lower()
-    print("Processing command:", command)
+        return f"Weather error: {e}"
     
+def play_number_game():
+    number = random.randint(1, 50)
+    guesses = 0
+
+    speak("Opening number guessing game")
+    speak("I have selected a number between 1 and 50")
+
+    while True:
+        try:
+            speak("Say your guess")
+
+            with sr.Microphone() as source:
+                recognizer.adjust_for_ambient_noise(source, duration=2)
+                audio = recognizer.listen(source, timeout=5, phrase_time_limit=7)
+
+            user_input = recognizer.recognize_google(audio)
+            
+
+            guess = int(user_input)
+            guesses += 1
+
+            if guess > number:
+                speak(f"Lower number please. and your number {guess} attempts are {guesses}")
+            elif guess < number:
+                speak(f"Higher number please. and your number {guess} attempts are {guesses}")
+                
+            elif guess == "exit":
+                speak("Exiting the game.")
+                break
+            else:
+                speak(f"Congratulations! You guessed number {number} in {guesses} attempts")
+                break
+            
+            
+
+        except sr.UnknownValueError:
+            speak("I did not understand. Try again.")
+        except ValueError:
+            speak("Please say a number")
+        except Exception as e:
+            speak("Something went wrong.", e)
+            break
+
+
+def process_command(command):
+    command = command.lower()
+    log(f"Processing command: {command}")
+
+   
     if "news" in command or "headlines" in command:
-        speak("Fetching the top three headlines, please wait...")
+        speak("Fetching top three headlines.")
         headlines = Igris_Api.get_news()
-
-        if len(headlines) == 1 and headlines[0].startswith("Error"):
-            speak("Sorry, I couldn't fetch the news right now.")
-            print(headlines[0])
-            return
-
-        for i, headline in enumerate(headlines, start=1):
-            speak(f"Headline {i}: {headline}")
+        for i, h in enumerate(headlines, 1):
+            speak(f"Headline {i}: {h}")
         return
 
     
@@ -89,16 +133,15 @@ def processCommand(command):
     elif "open facebook" in command:
         speak("Opening Facebook")
         webbrowser.open("https://facebook.com")
-        
-    elif "version" in command:
-        speak("My version is one point O.")
-        speak("I was created by Mohit Surewal.")
-    
-    elif "who created you" in command or "your creator" in command:
-        speak("I was created by Mohit Surewal from University Institute of Technology, BU Bhopal.")
-        speak("My current version is one point O.")
 
-   
+    
+    elif "version" in command:
+        speak("My version is one point O. I was created by Mohit Surewal.")
+
+    elif "who created you" in command:
+        speak("I was created by Mohit Surewal from UIT BU Bhopal.")
+
+    
     elif command.startswith("play"):
         parts = command.split(" ", 1)
         if len(parts) > 1:
@@ -111,114 +154,138 @@ def processCommand(command):
                 speak(f"Sorry, I couldn't find {song} in your music library.")
         else:
             speak("Please say the song name after play.")
-
-    elif "alarm" in command:
-        speak("Please tell me the alarm time, like 6 30 AM or 10 PM")
-
-        try:
-            with sr.Microphone() as source:
-                recognizer.adjust_for_ambient_noise(source)
-                audio = recognizer.listen(source, timeout=5, phrase_time_limit=5)
-                spoken_time = recognizer.recognize_google(audio)
-
-            alarm_time = alarm.convert_to_24hr(spoken_time)
-
-            if alarm_time is None:
-                speak("Sorry, I could not understand the time format.")
-                return
-
-            alarm.set_alarm(alarm_time, speak, recognizer)
-
-        except Exception as e:
-            speak("Sorry, I couldn't set the alarm.")
-            print("Alarm error:", e)
-
+    
     
     elif "joke" in command:
         joke = pyjokes.get_joke()
-        print("Joke:", joke)
         speak(joke)
+        
+    elif "exit" in command :
+        speak("ok sorcerer, going to sleep....")
+        app.quit()
 
+    elif "game" in command or "start game" in command:
+        play_number_game()
     
     elif "weather" in command:
-        words = command.split()
-        city = ""
+        speak("Please tell me the city name.")
 
-        
-        if "in" in words:
-            city = " ".join(words[words.index("in") + 1:])
-            last_city = city  
+        try:
+            with sr.Microphone() as source:
+                recognizer.adjust_for_ambient_noise(source, duration=1)
+                audio = recognizer.listen(source, timeout=5, phrase_time_limit=5)
 
-       
-        if not city:
-            if last_city:
-                speak(f"Fetching weather for your last city, {last_city}.")
-                report = get_weather(last_city)
-                speak(report)
-                return
-            else:
-                speak("Please tell me the city name.")
-                print("Listening for city name...")
-                try:
-                    with sr.Microphone() as source:
-                        recognizer.adjust_for_ambient_noise(source, duration=1)
-                        audio = recognizer.listen(source, timeout=5, phrase_time_limit=5)
-                        city = recognizer.recognize_google(audio)
-                        last_city = city
-                        print(f"City recognized: {city}")
-                except sr.WaitTimeoutError:
-                    speak("You didn’t say anything. Please try again.")
-                    return
-                except sr.UnknownValueError:
-                    speak("Sorry, I could not understand the city name.")
-                    return
-                except Exception as e:
-                    print("Error recognizing city:", e)
-                    speak("Sorry, I could not get the city name.")
-                    return
+            city = recognizer.recognize_google(audio)
+            log(f"City heard: {city}")
 
-        speak(f"Fetching weather report for {city}.")
-        report = get_weather(city)
-        speak(report)
+            speak(f"Fetching weather for {city}")
+            report = get_weather(city)
+            speak(report)
 
-    
+        except sr.UnknownValueError:
+            speak("Sorry, I could not understand the city name.")
+
+        except sr.WaitTimeoutError:
+            speak("You did not say the city name.")
+
     else:
-        speak("Sorry, I didn’t understand that command.")  
+        speak("Sorry, I did not understand that command.")
 
-    
 
-if __name__ == "__main__":
-   
-    speak("Initializing Igris.....")
+
+
+def start_listening():
+    speak("Listening started.")
 
     while True:
         try:
             with sr.Microphone() as source:
                 recognizer.adjust_for_ambient_noise(source, duration=1)
-                print("\nListening for wake word......")
+                log("Listening for wake word...")
                 audio = recognizer.listen(source, timeout=5, phrase_time_limit=5)
 
             word = recognizer.recognize_google(audio)
-            print("Heard:", word)
+            log(f"Heard: {word}")
 
-            if word.lower() == "arise":  # wake word
+            if word.lower() == "arise":
                 speak("Igris Arise")
+                
+            
 
                 with sr.Microphone() as source:
                     recognizer.adjust_for_ambient_noise(source, duration=1)
-                    print("Listening for your command...")
+                    log("Listening for command...")
                     audio = recognizer.listen(source, timeout=7, phrase_time_limit=7)
 
                 command = recognizer.recognize_google(audio)
-                print("Command:", command)
-                processCommand(command)
+                log(f"Command: {command}")
+                process_command(command)
                 
+            elif word.lower() =="exit" or word.lower() == "sleep":
+                speak("going sorcerer....")
+                break
 
-        except sr.WaitTimeoutError:
-            print("Listening timed out. Waiting again...")
-            
         except sr.UnknownValueError:
-            print("Could not understand audio.")
-            
+            log("Could not understand audio.")
+        except sr.WaitTimeoutError:
+            log("Listening timed out.")
         except Exception as e:
-            print("Error:", e)
+            log(f"Error: {e}")
+
+
+
+
+app = tk.Tk()
+app.title("SPEECH - RECOGNITION (IGRIS) V1.O")
+app.geometry("900x550")
+app.configure(bg="#0b0f1a")
+
+top = tk.Frame(app, bg="#0b1220")
+top.pack(fill="x", padx=10, pady=10)
+
+start_btn = tk.Button(
+    top, text="Start Listening",
+    command=start_listening,
+    bg="#f01505", fg="white",
+    width=18
+)
+start_btn.pack(side="left", padx=8)
+
+tk.Label(
+    top, text="Manual Command:",
+    bg="#0b1220", fg="white"
+).pack(side="left", padx=8)
+
+manual_entry = tk.Entry(top, width=40)
+manual_entry.pack(side="left", padx=8)
+
+
+def manual_send():
+    cmd = manual_entry.get().strip()
+    if cmd:
+        log(f"Manual command: {cmd}")
+        process_command(cmd)
+        manual_entry.delete(0, tk.END)
+
+
+tk.Button(
+    top, text="Send",
+    command=manual_send,
+    bg="#2ecc71", fg="white",
+    width=10
+).pack(side="left", padx=8)
+
+log_area = scrolledtext.ScrolledText(
+    app, wrap=tk.WORD,
+    bg="#08121a", fg="#e6f0ff",
+    font=("Times New Roman", 14)
+)
+log_area.pack(fill="both", expand=True, padx=10, pady=10)
+
+
+
+
+log("IGRIS GUI started.")
+speak("Hi, I am Igris. Version one point o.")
+
+app.mainloop()
