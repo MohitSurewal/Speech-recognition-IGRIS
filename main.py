@@ -1,3 +1,4 @@
+
 import time
 import tkinter as tk
 from tkinter import scrolledtext
@@ -9,6 +10,8 @@ import requests
 import music_library
 import Igris_Api
 import random
+
+
 
 OPENWEATHER_API_KEY = "c2e46c0649f7a423c313ade86d820588"
 
@@ -26,6 +29,7 @@ def speak(text):
     log(f"IGRIS: {text}")
     engine.say(text)
     engine.runAndWait()
+    
 
 
 def log(message):
@@ -33,7 +37,10 @@ def log(message):
     log_area.insert(tk.END, f"[{timestamp}] {message}\n")
     log_area.see(tk.END)
     app.update()
+    
 
+
+        
 
 
 
@@ -91,6 +98,7 @@ def play_number_game():
             elif guess < number:
                 speak(f"Higher number please. and your number {guess} attempts are {guesses}")
                 
+                
             elif guess == "exit":
                 speak("Exiting the game.")
                 break
@@ -121,7 +129,7 @@ def process_command(command):
             speak(f"Headline {i}: {h}")
         return
 
-    
+   
     if "open google" in command:
         speak("Opening Google")
         webbrowser.open("https://google.com")
@@ -133,15 +141,20 @@ def process_command(command):
     elif "open facebook" in command:
         speak("Opening Facebook")
         webbrowser.open("https://facebook.com")
+        
+    elif "open qr code genrtor" in command:
+        speak("opening QR code Generator")
+        webbrowser.open("https://qr-code-generator-smks.onrender.com/")
 
     
     elif "version" in command:
-        speak("My version is one point O. I was created by Mohit Surewal.")
+        speak("My version is one point O. I was created in Surewal.tech.")
 
     elif "who created you" in command:
-        speak("I was created by Mohit Surewal from UIT BU Bhopal.")
+        speak("I was created in Surewal.tech which is owned by Mohit Surewal.")
 
-    
+   
+
     elif command.startswith("play"):
         parts = command.split(" ", 1)
         if len(parts) > 1:
@@ -195,9 +208,13 @@ def process_command(command):
 
 
 def start_listening():
+    
     speak("Listening started.")
+    
 
     while True:
+        
+        
         try:
             with sr.Microphone() as source:
                 recognizer.adjust_for_ambient_noise(source, duration=1)
@@ -211,7 +228,6 @@ def start_listening():
                 speak("Igris Arise")
                 
             
-
                 with sr.Microphone() as source:
                     recognizer.adjust_for_ambient_noise(source, duration=1)
                     log("Listening for command...")
@@ -224,6 +240,8 @@ def start_listening():
             elif word.lower() =="exit" or word.lower() == "sleep":
                 speak("going sorcerer....")
                 break
+            
+            
 
         except sr.UnknownValueError:
             log("Could not understand audio.")
