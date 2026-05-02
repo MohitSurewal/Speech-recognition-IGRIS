@@ -1,4 +1,3 @@
-
 import time
 import tkinter as tk
 from tkinter import scrolledtext
@@ -10,8 +9,8 @@ import requests
 import music_library
 import Igris_Api
 import random
-
-
+import os
+import pywhatkit
 
 OPENWEATHER_API_KEY = "c2e46c0649f7a423c313ade86d820588"
 
@@ -20,8 +19,8 @@ engine = pyttsx3.init()
 
 voices = engine.getProperty("voices")
 if len(voices) > 1:
-    engine.setProperty("voice", voices[1].id)   # female voice
-engine.setProperty("rate", 180)
+    engine.setProperty("voice", voices[1].id)   # female voice, [0] is usually male
+engine.setProperty("rate", 160)
 
 
 
@@ -38,11 +37,7 @@ def log(message):
     log_area.see(tk.END)
     app.update()
     
-
-
-        
-
-
+# mausam report function
 
 def get_weather(city):
     if not OPENWEATHER_API_KEY:
@@ -71,7 +66,9 @@ def get_weather(city):
 
     except Exception as e:
         return f"Weather error: {e}"
-    
+
+# number guessing game
+
 def play_number_game():
     number = random.randint(1, 50)
     guesses = 0
@@ -116,6 +113,7 @@ def play_number_game():
             speak("Something went wrong.", e)
             break
 
+# commmands start fromm here:
 
 def process_command(command):
     command = command.lower()
@@ -129,10 +127,22 @@ def process_command(command):
             speak(f"Headline {i}: {h}")
         return
 
+
+    
+    if "time" in command or "date" in command or "samay" in command:
+        now = time.localtime()
+        current_time = time.strftime("%I:%M %p", now)
+        current_date = time.strftime("%B %d, %Y", now)
+        speak(f"The current time is {current_time} and today's date is {current_date}.")
+        log(f"Time: {current_time}, Date: {current_date}")
+        return 
+
    
     if "open google" in command:
         speak("Opening Google")
         webbrowser.open("https://google.com")
+        
+    
 
     elif "open youtube" in command:
         speak("Opening YouTube")
@@ -142,7 +152,8 @@ def process_command(command):
         speak("Opening Facebook")
         webbrowser.open("https://facebook.com")
         
-    elif "open qr code genrtor" in command:
+        
+    elif "open qr code generator" in command or "code generator" in command:
         speak("opening QR code Generator")
         webbrowser.open("https://qr-code-generator-smks.onrender.com/")
 
@@ -152,10 +163,82 @@ def process_command(command):
 
     elif "who created you" in command:
         speak("I was created in Surewal.tech which is owned by Mohit Surewal.")
+        
+        
+        
+        
+    elif "shutdown" in command or "turn off laptop" in command or "band karo laptop" in command:
+        log("Processing shutdown command.")
+        speak("Are you sure you want to shut down your system?")
 
-   
+        try:
+            with sr.Microphone() as source:
+                recognizer.adjust_for_ambient_noise(source, duration=2)
+                audio = recognizer.listen(source, timeout=7, phrase_time_limit=7)
 
-    elif command.startswith("play"):
+            confirmation = recognizer.recognize_google(audio).lower()
+            log(f"Confirmation heard: {confirmation}")
+
+            if "kar do" in confirmation or "confirm" in confirmation or "kardo" in confirmation:
+                log("Shutting down system...")
+                speak("Shutting down your system, Master!")
+                os.system("shutdown /s /t 10")
+
+            elif "no" in confirmation or "cancel" in confirmation:
+                speak("Shutdown cancelled.")
+
+            else:
+                log("I did not understand. Shutdown cancelled for safety.")
+
+        except sr.UnknownValueError:
+            speak("Sorry, I could not understand you. Shutdown cancelled.")
+
+        except sr.WaitTimeoutError:
+            speak("No response received. Shutdown cancelled.")
+
+        except Exception as e:
+            log(f"Error: {e}")
+            speak("Something went wrong. Shutdown cancelled.")
+            
+            
+    if "restart" in command or "restart laptop" in command:
+        log("Processing restart command.")
+        speak("Are you sure you want to restart your system?")
+
+        try:
+            with sr.Microphone() as source:
+                recognizer.adjust_for_ambient_noise(source, duration=2)
+                audio = recognizer.listen(source, timeout=7, phrase_time_limit=7)
+
+            confirmation = recognizer.recognize_google(audio).lower()
+            log(f"Confirmation heard: {confirmation}")
+
+            if "yes" in confirmation or "confirm" in confirmation:
+                log("Restarting system...")
+                speak("Restarting your system, Master!")
+                os.system("shutdown /r /t 10")
+
+            elif "no" in confirmation or "cancel" in confirmation:
+                speak("restart cancelled.")
+
+            else:
+                speak("I did not understand. restart cancelled for safety.")
+
+        except sr.UnknownValueError:
+            speak("Sorry, I could not understand you. restart cancelled.")
+
+        except sr.WaitTimeoutError:
+            speak("No response received. restart cancelled.")
+
+        except Exception as e:
+            log(f"Error: {e}")
+            speak("Something went wrong. restart cancelled.")
+                
+                
+
+        
+
+    elif command.startswith("play") :
         parts = command.split(" ", 1)
         if len(parts) > 1:
             song = parts[1].strip()
@@ -164,23 +247,29 @@ def process_command(command):
                 speak(f"Playing {song} from your library.")
                 webbrowser.open(link)
             else:
-                speak(f"Sorry, I couldn't find {song} in your music library.")
+                 song not in music_library.music
+            speak(f"playing {song} on youtube")
+            pywhatkit.playonyt(song)
         else:
-            speak("Please say the song name after play.")
+            speak("Please specify a song to play.")     
+    
+    
+    
     
     
     elif "joke" in command:
         joke = pyjokes.get_joke()
         speak(joke)
         
-    elif "exit" in command :
+    elif "exit" in command or "so jao" in command or "" :
         speak("ok sorcerer, going to sleep....")
         app.quit()
 
     elif "game" in command or "start game" in command:
         play_number_game()
+        
     
-    elif "weather" in command:
+    elif "weather" in command or "mausam " in command:
         speak("Please tell me the city name.")
 
         try:
@@ -201,11 +290,12 @@ def process_command(command):
         except sr.WaitTimeoutError:
             speak("You did not say the city name.")
 
-    else:
-        speak("Sorry, I did not understand that command.")
+        except Exception as e:
+            log(f"Error: {e}")
+            speak("Something went wrong while fetching weather.")
 
 
-
+# litsen Function
 
 def start_listening():
     
@@ -224,7 +314,7 @@ def start_listening():
             word = recognizer.recognize_google(audio)
             log(f"Heard: {word}")
 
-            if word.lower() == "arise":
+            if word.lower() == "arise" or word.lower() == "let's get to work" or word.lower() == "jago":
                 speak("Igris Arise")
                 
             
@@ -237,7 +327,7 @@ def start_listening():
                 log(f"Command: {command}")
                 process_command(command)
                 
-            elif word.lower() =="exit" or word.lower() == "sleep":
+            elif word.lower() =="exit" or word.lower() == "sleep" or word.lower() == "so jao" or word.lower() == "band karo" or word.lower() == "band kar do":
                 speak("going sorcerer....")
                 break
             
@@ -251,7 +341,7 @@ def start_listening():
             log(f"Error: {e}")
 
 
-
+# tikinter GUI setup
 
 app = tk.Tk()
 app.title("SPEECH - RECOGNITION (IGRIS) V1.O")
