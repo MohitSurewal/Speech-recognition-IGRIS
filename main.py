@@ -12,7 +12,7 @@ import random
 import os
 import pywhatkit
 
-OPENWEATHER_API_KEY = "c2e46c0649f7a423c313ade86d820588"
+OPENWEATHER_API_KEY = 
 
 recognizer = sr.Recognizer()
 engine = pyttsx3.init()
